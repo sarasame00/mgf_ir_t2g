@@ -1,0 +1,5 @@
+
+numpy
+sparse_ir
+matplotlib
+scipy
