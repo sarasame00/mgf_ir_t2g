@@ -1,17 +1,18 @@
 import numpy as np
 from scipy.sparse import lil_matrix
 from itertools import combinations
+import time
 
 # === Parameters ===
 
-U = 2.5  # Hubbard intra-orbital Coulomb interaction
-J = 0.2  # Hund's exchange coupling
-g = 0.1        # Coupling constant
-B = 0.1        # Magnetic field strength
-size_grid = 101 # Grid size for numerical calculations
-Qmax = 1.2      # Maximum value for a parameter Q
-N_values = range(1, 6)
-lb_values = [0, 0.1, 0.3, 0.5] # Values of spin-orbit coupling strength (λ)
+U = 2.5          # Hubbard intra-orbital Coulomb repulsion (eV)
+J = 0.2          # Hund's rule exchange coupling (eV)
+g = 0.1          # Jahn-Teller coupling strength (dimensionless)
+B = 0.1          # Harmonic trapping potential (restoring force coefficient)
+size_grid = 101  # Number of points along each Q axis (Qx, Qy) for energy map
+Qmax = 1.2       # Maximum value for Jahn-Teller distortion coordinates Qx and Qy
+N_values = range(1, 6)  # Electron occupations to consider (N = 1 to 5)
+lb_values = [0, 0.1, 0.3, 0.5]  # Spin-orbit coupling strengths λ (eV)
 
 
 def basisFock(num_modes):
@@ -33,7 +34,8 @@ def basisFock(num_modes):
     for N in range(num_modes + 1):  # Loop over all possible numbers of occupied modes (from 0 to num_modes)
         basis += list(combinations(range(num_modes), N))  # Generate all possible occupation combinations of N modes
     
-    return basis 
+    return basis
+
 
 def annihilationFermi(mode, basis):
     '''
@@ -73,7 +75,7 @@ def creationFermi(mode, basis):
     - basis (list of tuples): The Fock space basis, where each state is a tuple of occupied modes.
 
     Returns:
-    - C (lil_matrix): Sparse matrix representation of the creation operator c†_mode.
+    - C (scipy.sparse.lil_matrix): Sparse matrix representation of the creation operator c†_mode.
     """
 
     size = len(basis)  # Number of basis states
@@ -126,8 +128,23 @@ sy = -1j*0.5*(cyzu*ayzd - cyzd*ayzu + czxu*azxd - czxd*azxu + cxyu*axyd - cxyd*a
 sz = 0.5*(cyzu*ayzu - cyzd*ayzd + czxu*azxu - czxd*azxd + cxyu*axyu - cxyd*axyd)
 
 
-# Define the Hubbard-Kanamori interaction Hamiltonian (HK)
-def HK(U, J) : 
+def HK(U, J) :
+    '''
+    Constructs the Hubbard–Kanamori interaction Hamiltonian for the t₂g shell.
+
+    This function includes:
+    - Intra-orbital Coulomb repulsion
+    - Inter-orbital Coulomb repulsion (same and opposite spin)
+    - Hund’s rule exchange (spin alignment)
+    - Pair-hopping processes
+
+    Inputs:
+    - U (float): Intra-orbital Coulomb repulsion
+    - J (float): Hund's exchange coupling
+
+    Returns:
+    - HK (scipy.sparse.lil_matrix): Total interaction Hamiltonian in second quantization
+    ''' 
     HK  =  (
         # Intra-orbital Coulomb repulsion: penalizes double occupancy in the same orbital
         U * (nyzu * nyzd + nzxu * nzxd + nxyu * nxyd) +
@@ -162,97 +179,132 @@ def HK(U, J) :
     )
     return HK
 
-# Define the spin-orbit coupling Hamiltonian (Hsoc)
+
 def Hsoc(lb):
-    """
-    Computes the spin-orbit coupling (SOC) Hamiltonian.
-    
+    '''
+    Constructs the spin-orbit coupling (SOC) Hamiltonian for the t₂g shell.
+
+    The SOC term couples spin and orbital angular momenta, lifting the degeneracy of t₂g levels.
+    This implementation uses complex combinations of fermionic creation and annihilation operators.
+
     Parameters:
-    - lb (float): The spin-orbit coupling strength (λ).
-    
+    - lb (float): Spin-orbit coupling strength λ (in eV)
+
     Returns:
-    - Hsoc (matrix): The SOC Hamiltonian matrix.
-    """
-    Hsoc = 0.5 * lb * (
-        # Terms coupling spin and orbital motion with complex phase factors
-        cyzu * (1j * azxu - axyd) -  # Coupling in yz orbital (up)
-        cyzd * (1j * azxd - axyu) -  # Coupling in yz orbital (down)
-        czxu * (1j * ayzu - 1j * axyd) +  # Coupling in zx orbital (up)
-        czxd * (1j * ayzd + 1j * axyu) +  # Coupling in zx orbital (down)
-        cxyu * (ayzd - 1j * azxd) -  # Coupling in xy orbital (up)
-        cxyd * (ayzu + 1j * azxu)  # Coupling in xy orbital (down)
+    - Hsoc (scipy.sparse.lil_matrix): SOC Hamiltonian as a sparse matrix in second quantization
+    '''
+
+    Hsoc = 0.5 * lb * (  # Overall SOC prefactor: λ/2
+        cyzu * (1j * azxu - axyd) -      # SOC term: yz↑ couples to zx↓ (imaginary) and xy↓ (real)
+        cyzd * (1j * azxd - axyu) -      # yz↓ couples to zx↑ and xy↑
+        czxu * (1j * ayzu - 1j * axyd) + # zx↑ couples to yz↓ and xy↓
+        czxd * (1j * ayzd + 1j * axyu) + # zx↓ couples to yz↑ and xy↑
+        cxyu * (ayzd - 1j * azxd) -      # xy↑ couples to yz↓ and zx↓
+        cxyd * (ayzu + 1j * azxu)        # xy↓ couples to yz↑ and zx↑
     )
-    return Hsoc
 
-# Define the Jahn-Teller interaction Hamiltonian in terms of Qx and Qy
-def Hjt(qx, qy): 
-    return g * (qy * (nyz - nzx) / np.sqrt(3) +  # Contribution along yz and zx orbitals
-        qx * (2 * Nop / 3 - nyz - nzx)   # Contribution affecting total electron number
-)
+    return Hsoc  # Return the spin-orbit Hamiltonian as a sparse matrix
 
-# Function to compute the lowest eigenvalue of the Hamiltonian in a selected subspace
-def eigobj(x, N=1):
-    """
-    Computes the lowest eigenvalue of the Hamiltonian HN for a given mode x and subspace N.
+
+def Hjt(qx, qy):
+    '''
+    Constructs the Jahn-Teller (JT) interaction Hamiltonian for t₂g orbitals.
+
+    The JT effect couples lattice distortions (Qx, Qy) to orbital occupations,
+    lowering symmetry and lifting orbital degeneracy in a way that depends on
+    orbital imbalance.
 
     Parameters:
-    x : tuple
-        (x[0], x[1]) represent the parameters for the Jahn-Teller interaction.
-    N : int
-        Index selecting a particular subspace in the Hamiltonian.
+    - qx (float): Jahn-Teller distortion component along Q₂ mode (orthorhombic)
+    - qy (float): Jahn-Teller distortion component along Q₃ mode (tetragonal)
 
     Returns:
-    float : The lowest eigenvalue of HN with an additional harmonic trapping term.
-    """
+    - Hjt (scipy.sparse.lil_matrix): Jahn-Teller interaction Hamiltonian in second quantization
+    '''
 
-    # Define index slices for different orbital/mode components
-    sl = {
-        0: slice(0, 1),   # First range: single element at index 0
-        1: slice(1, 7),   # Second range: elements from index 1 to 6
-        2: slice(7, 22),  # Third range: elements from index 7 to 21
-        3: slice(22, 42), # Fourth range: elements from index 22 to 41
-        4: slice(42, 57), # Fifth range: elements from index 42 to 56
-        5: slice(57, 63), # Sixth range: elements from index 57 to 62
-        6: slice(63, 64)  # Last range: single element at index 63
+    return g * (  # Global JT coupling constant
+        qy * (nyz - nzx) / np.sqrt(3) +      # Orthorhombic Q₃ mode: imbalance between yz and zx
+        qx * (2 * Nop / 3 - nyz - nzx)       # Tetragonal Q₂ mode: deviation from spherical symmetry
+    )
+
+
+def eigobj(x, N=1):
+    '''
+    Computes the lowest eigenvalue of the total Hamiltonian restricted to a specific particle-number subspace.
+
+    This includes:
+    - Kanamori interaction
+    - Spin-orbit coupling
+    - Jahn-Teller distortion
+    - Harmonic confinement potential (Q²)
+
+    Parameters:
+    - x (tuple): Coordinates (Qx, Qy) for the Jahn-Teller distortion
+    - N (int): Index corresponding to a specific particle-number subspace
+
+    Returns:
+    - float: Lowest eigenvalue (ground state energy) in subspace N, with harmonic potential added
+    '''
+
+    sl = {  # Dictionary of slice ranges to isolate subspaces by total occupation number
+        0: slice(0, 1),        # N = 0
+        1: slice(1, 7),        # N = 1
+        2: slice(7, 22),       # N = 2
+        3: slice(22, 42),      # N = 3
+        4: slice(42, 57),      # N = 4
+        5: slice(57, 63),      # N = 5
+        6: slice(63, 64)       # N = 6
     }
 
-    # Extract the submatrix corresponding to the selected subspace
+    # Construct the full Hamiltonian and project onto the subspace with N particles
     HN = (HK(U, J) + Hsoc(lb) + Hjt(x[0], x[1]))[sl[N], sl[N]]
 
-    # Compute eigenvalues of HN
+    # Compute the eigenvalues of the projected Hamiltonian (converted to dense array)
     w = np.linalg.eigvalsh(HN.toarray())
 
-    # Return the lowest eigenvalue with an additional quadratic trapping term
+    # Return the ground state energy plus harmonic trapping potential: (B/2)(Qx² + Qy²)
     return w[0] + 0.5 * B * (x[0]**2 + x[1]**2)
 
 
-# Loop over different values of spin-orbit coupling strength (λ)
-for lb in lb_values:
-    print('-' * 5)  # Print a separator for readability
+# Start global timer
+total_start_time = time.time()
 
-    # Define a 2D grid for Qx and Qy ranging from -Qmax to Qmax
+# Loop over different spin-orbit coupling strengths
+for lb in lb_values:
+    print(f'\n{"=" * 40}\n→ Starting λ = {lb:.2f}\n{"=" * 40}\n')
+
+    # Create 2D grid for Qx and Qy
     Qx, Qy = np.meshgrid(*(np.linspace(-Qmax, Qmax, size_grid),) * 2)
 
     # Loop over different subspaces N
     for N in N_values:
-        print(f'λ = {lb}, N = {N}')  # Print the current subspace index
+        print(f'→ Solving for λ = {lb:.2f}, electron count N = {N}...')
 
-        # Initialize an energy map for the given subspace
+        start_time = time.time()  # Start timer for this computation
+
+        # Initialize energy map
         emap = np.zeros((size_grid, size_grid))
 
-        # Loop over the grid points
+        # Compute lowest eigenvalue for each grid point
         for i in range(size_grid):
             for j in range(size_grid):
-                # Compute the lowest eigenvalue of the Hamiltonian for each (Qx, Qy) point
-                emap[i,j] = eigobj([Qx[i, j], Qy[i, j]], N)
-        # Normalize the energy map by subtracting its minimum value
+                emap[i, j] = eigobj([Qx[i, j], Qy[i, j]], N)
+
+        # Normalize the energy map by subtracting the minimum value
         emap -= np.min(emap)
 
-        # Save the computed data as a text file for later use in a paper figure
+        # Save results to file
+        filename = f"{N}N_{int(10 * lb)}SOC_lowee.txt"
         np.savetxt(
-            "PaperFigs/T0data/%iN_%iSOC_lowee.txt" % (N, 10 * lb),
+            f"PaperFigs/T0data/{filename}",
             np.array((Qx, Qy, emap)).reshape((3, emap.shape[0] * emap.shape[1])).T
         )
 
-# Print separator to indicate the end of the computation
-print('-' * 15 + '\n')
+        # Print timing for this subspace
+        elapsed = time.time() - start_time
+        print(f'   ✓ Saved: {filename} — elapsed time: {elapsed:.2f} seconds')
+
+# Report total computation time
+total_elapsed = time.time() - total_start_time
+print(f'\n✅ All calculations completed in {total_elapsed:.2f} seconds.')
+print('=' * 40 + '\n')

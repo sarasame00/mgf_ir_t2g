@@ -63,7 +63,7 @@ for i, lb in enumerate(lb_values):
 
         filename = f"{N}N_{soc}SOC_lowee.png"
 
-        print('✅ Plotting: '+ filename)
+        print('→ Plotting: '+ filename)
 
         ax = axes[i, j]
         key = (N, lb)
@@ -103,7 +103,7 @@ for i, lb in enumerate(lb_values):
         else:
             ax.set_yticklabels([])
 
-print('✅ Plotting: combined_energy_map.png')
+print('→ Plotting: combined_energy_map.png')
 
 # === Shared colorbar ===
 fig.subplots_adjust(right=0.88, wspace=0.1, hspace=0.1)
@@ -115,4 +115,4 @@ fig.colorbar(c_grid, cax=cbar_ax, label="Energy")
 # Save and show
 plt.savefig(grid_plot_path, dpi=300)
 
-print("🎉 Done! All individual and grid plots saved.")
+print("\n ✅ All plots saved.")

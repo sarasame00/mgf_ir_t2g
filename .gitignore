@@ -1,0 +1,65 @@
+# --- Python bytecode ---
+__pycache__/
+*.py[cod]
+*.pyo
+
+# --- Virtual environments ---
+venv/
+.env/
+.venv/
+ENV/
+env.bak/
+env/
+
+# --- Jupyter notebooks checkpoints ---
+.ipynb_checkpoints/
+
+# --- System files ---
+.DS_Store
+Thumbs.db
+
+# --- Logs, outputs, cache ---
+*.log
+*.out
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# --- Simulation output data ---
+t2g_jt_soc/data/logs/
+t2g_jt_soc/data/results/
+t2g_jt_soc/data/simulated_values.csv
+
+single_site/data/
+single_site/figures/
+
+# --- HDF5, binary, large files ---
+*.hdf5
+*.npz
+*.npy
+*.pkl
+
+# --- IDE/editor specific files ---
+.vscode/
+.idea/
+*.code-workspace
+
+# --- Test coverage / profiling ---
+.coverage
+.cache/
+htmlcov/
+.tox/
+.pytest_cache/
+
+# --- Build artifacts ---
+build/
+dist/
+*.egg-info/
+*.so
+*.c
+
+# --- Misc ---
+*.tar.gz
+*.zip
+*.pdf

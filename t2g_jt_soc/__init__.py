@@ -1,4 +1,4 @@
 __all__ = ["ohmatrix.py", "dyson.py"]
 
-from .ohmatrix import *
-from .dyson import *
+from .maths.ohmatrix import *
+from .simulation.dyson_solver import *

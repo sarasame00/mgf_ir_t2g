@@ -3,3 +3,7 @@ numpy
 sparse_ir
 matplotlib
 scipy
+h5py
+os
+datatime
+csv
