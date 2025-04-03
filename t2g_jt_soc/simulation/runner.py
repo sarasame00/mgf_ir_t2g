@@ -14,6 +14,19 @@ def run_all_simulations(parameter_grid, csv_path, data_dir):
     - csv_path (str): Path to the CSV file that logs completed simulations.
     - data_dir (str): Directory to store simulation outputs (.out and .hdf5).
     """
+    # Ensure the CSV directory exists
+    csv_dir = os.path.dirname(csv_path)
+    if csv_dir and not os.path.exists(csv_dir):
+        os.makedirs(csv_dir)
+
+    # If CSV doesn't exist, create it with a header
+    if not os.path.exists(csv_path):
+        with open(csv_path, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                'T', 'wm', 'N', 't', 'U', 'J', 'Jphm', 'w0', 'g', 'lbd',
+                'k_sz', 'diis_mem', 'timestamp'
+            ])
 
     # Create the output directory if it doesn't exist
     if not os.path.exists(data_dir):
