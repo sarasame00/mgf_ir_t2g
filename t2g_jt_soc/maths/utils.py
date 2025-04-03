@@ -47,6 +47,5 @@ def fprint(string, file, **kwargs):
     - file (file-like object): Target file to write the string to
     - **kwargs: Additional keyword arguments passed to the print function (e.g., end, flush)
     '''
-    print(string, **kwargs)
     print(string, file=file, **kwargs)
 

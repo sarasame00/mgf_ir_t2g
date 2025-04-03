@@ -1,67 +1,83 @@
 import os
-from datetime import datetime
 import csv
+from datetime import datetime
+from joblib import Parallel, delayed
+from tqdm import tqdm
+from multiprocessing import Lock
 
-from simulation.dyson_solver import DysonSolver  # Dyson equation solver class
+from simulation.dyson_solver import DysonSolver
 
-def run_all_simulations(parameter_grid, csv_path, data_dir):
+# CSV column header
+CSV_HEADER = [
+    'T', 'wm', 'N', 't', 'U', 'J', 'Jphm', 'w0', 'g', 'lbd',
+    'k_sz', 'diis_mem', 'timestamp'
+]
+
+# Global print lock to avoid overlap in logs
+print_lock = Lock()
+
+def safe_print(*args, **kwargs):
+    with print_lock:
+        print(*args, **kwargs)
+
+def run_single_simulation(val, csv_path, data_dir):
     """
-    Runs a batch of simulations using the DysonSolver across a predefined parameter grid.
-    Only runs simulations that have not already been recorded in the CSV file.
-    
-    Parameters:
-    - parameter_grid (list of tuples): Each tuple defines a full set of model parameters.
-    - csv_path (str): Path to the CSV file that logs completed simulations.
-    - data_dir (str): Directory to store simulation outputs (.out and .hdf5).
+    Runs a single DysonSolver simulation and appends result to CSV.
+    Thread-safe for joblib multiprocessing.
     """
-    # Ensure the CSV directory exists
-    csv_dir = os.path.dirname(csv_path)
-    if csv_dir and not os.path.exists(csv_dir):
-        os.makedirs(csv_dir)
 
-    # If CSV doesn't exist, create it with a header
-    if not os.path.exists(csv_path):
-        with open(csv_path, 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow([
-                'T', 'wm', 'N', 't', 'U', 'J', 'Jphm', 'w0', 'g', 'lbd',
-                'k_sz', 'diis_mem', 'timestamp'
-            ])
-
-    # Create the output directory if it doesn't exist
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
-
-    # Load previously completed simulations from the CSV log
+    # Load previously completed simulations
     already = set()
-    if os.path.exists(csv_path) and os.path.getsize(csv_path) > 0:
+    if os.path.exists(csv_path):
         with open(csv_path, 'r') as f:
             reader = csv.reader(f)
-            try:
-                next(reader)  # skip header if present
-            except StopIteration:
-                pass  # file is empty, nothing to skip
+            next(reader, None)  # skip header
             for line in reader:
                 already.add(tuple([float(s) for s in line[:-1]]))
 
-    # Open the CSV file in append mode to add new entries
-    with open(csv_path, 'a', newline='') as csvfl:
-        writer = csv.writer(csvfl)
+    if val in already:
+        safe_print(f"⏭️  Skipping: already done → {val}")
+        return
 
-        # Loop over all parameter sets in the grid
-        for val in parameter_grid:
-            if val in already:
-                # Skip this set if it was already completed
-                continue
+    now = datetime.now().strftime("%Y%m%d%H%M%S")
+    out_path = os.path.join(data_dir, now)
 
-            # Generate a unique timestamp-based identifier
-            now = datetime.now().strftime("%Y%m%d%H%M%S")
-            out_path = os.path.join(data_dir, now)
+    # Log start of the simulation
+    safe_print(f"🚀 Starting → T={val[0]} N={val[2]} U={val[4]} g={val[8]} lbd={val[9]}")
 
-            # Initialize and run the DysonSolver
-            solver = DysonSolver(*val, fl=out_path + ".out")
-            solver.solve(diis_active=True, tol=5e-6)
-            solver.save(out_path)
+    # Run DysonSolver
+    solver = DysonSolver(*val, fl=out_path + ".out")
+    solver.solve(diis_active=True, tol=5e-6)
+    solver.save(out_path)
 
-            # Log the parameters and timestamp to the CSV file
-            writer.writerow(list(val) + [int(now)])
+    safe_print(f"✅ Finished → saved {now}.out")
+
+    # Append result to CSV
+    with open(csv_path, 'a', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(list(val) + [int(now)])
+
+
+def run_all_simulations(parameter_grid, csv_path, data_dir, n_jobs=-1):
+    """
+    Run all Dyson simulations in parallel (joblib + tqdm).
+    Gracefully handles Ctrl+C interruption.
+    """
+    # Ensure folders exist
+    os.makedirs(data_dir, exist_ok=True)
+    os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+
+    # Initialize CSV file with header if needed
+    if not os.path.exists(csv_path) or os.path.getsize(csv_path) == 0:
+        with open(csv_path, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(CSV_HEADER)
+
+    try:
+        # Launch all jobs with progress bar
+        Parallel(n_jobs=n_jobs)(
+            delayed(run_single_simulation)(val, csv_path, data_dir)
+            for val in tqdm(parameter_grid, desc="Running simulations")
+        )
+    except KeyboardInterrupt:
+        safe_print("\n❌ Simulation interrupted by user (Ctrl+C). Exiting gracefully...")
