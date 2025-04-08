@@ -18,6 +18,7 @@ MGR_IR_T2G/
     ├── data/
     │   ├── logs/                   # Logs from simulation (DIIS, energy, debug info)
     │   ├── results/                # Output: G(ω), Σ(ω), correlators, etc.
+    │   ├── figures/                # 
     │   └── simulated_values.csv    # Summary table of runs (N, t, ξ → energy, JT gain, etc.)
     │
     ├── maths/

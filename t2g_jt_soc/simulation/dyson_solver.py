@@ -197,113 +197,204 @@ class DysonSolver:
 
     def __update_green(self, out_fl, tol=1e-6, delta=0.1):
         """
-        Self-consistently adjust chemical potential μ to match target density N.
-        Uses fixed-point iteration with adaptive step size and logging.
+        Self-consistently adjusts the chemical potential μ to enforce the target electron density N.
+
+        This is done via fixed-point iteration: μ is updated based on the deviation between
+        the computed electron density and the target value. The solver uses IR basis projection
+        and Matsubara Green's functions to estimate the density.
+
+        Parameters:
+        - out_fl (file): Open file object for writing logs (usually .out file).
+        - tol (float): Desired tolerance for density convergence (|N - N_exp|).
+        - delta (float): Initial step size for adjusting μ.
         """
-        self.__mu = np.sum((self.sehf + ohsum(self.irbf.u(self.beta)*(self.se2bl+2*self.seepl))).real.eigvals)/2
-        last_sign = 0
+        
+        # Estimate an initial guess for μ using the trace of the self-energy
+        self.__mu = np.sum((
+            self.sehf + ohsum(self.irbf.u(self.beta) * (self.se2bl + 2 * self.seepl))
+        ).real.eigvals) / 2
+
+        last_sign = 0  # To track whether we're increasing or decreasing μ
+
         while True:
             fprint("Starting with mu=%.8f" % self.mu, out_fl)
+
             if self.__t != 0:
+                # Full k-resolved Green's function G_k(iωₙ)
                 gkiw = (
-                    self.freqf[:,None,None,None] - self.Hlatt[None,:,:,:]
-                    - self.sehf - self.sephm[None,:,:,:] - 2*self.seepiw[:,None,None,None]
-                    + self.mu - 0.5*self.lbd*ohmatrix(0,1)
+                    self.freqf[:, None, None, None] - self.Hlatt[None, :, :, :]  # ε_k
+                    - self.sehf                                                   # Static HF self-energy
+                    - self.sephm[None, :, :, :]                                   # Momentum-dependent self-energy
+                    - 2 * self.seepiw[:, None, None, None]                        # Dynamical e-ph self-energy
+                    + self.mu                                                     # Chemical potential
+                    - 0.5 * self.lbd * ohmatrix(0, 1)                              # Spin-orbit term
                 )**-1
+
+                # Project G_k(iωₙ) to IR basis using ohfit and store only real part
                 self.__gkl = ohfit(self.smatf, gkiw, axis=0).real
-                glociw = ohsum(gkiw, axis=(1,2,3)) / self.k_sz**3
+
+                # Compute local Green’s function G_loc(iωₙ) by momentum averaging
+                glociw = ohsum(gkiw, axis=(1, 2, 3)) / self.k_sz**3
+
             else:
+                # In atomic limit (no hopping): only local Green's function
                 glociw = (
-                    self.freqf - self.sehf - 2*self.seepiw
-                    + self.mu - 0.5*self.lbd*ohmatrix(0,1)
+                    self.freqf
+                    - self.sehf
+                    - 2 * self.seepiw
+                    + self.mu
+                    - 0.5 * self.lbd * ohmatrix(0, 1)
                 )**-1
+
+            # Project G_loc(iωₙ) into the IR basis
             self.__glocl = ohfit(self.smatf, glociw).real
+
+            # Estimate density using trace over G_loc(τ=β)
             Nexp = -6 * np.sum(self.irbf.u(self.beta) * self.glocl.a)
             fprint("Finished with Nexp=%.8f" % (Nexp.real), out_fl)
+
+            # Difference from target density
             DN = self.N - Nexp
+
+            # If density matches within tolerance → stop iteration
             if abs(DN) <= tol:
                 return
+
+            # Otherwise, adapt μ (and shrink delta if sign flipped)
             if DN > 0:
-                if last_sign == -1: delta /= 2
+                if last_sign == -1:
+                    delta /= 2
                 self.__mu += delta
                 last_sign = +1
             elif DN < 0:
-                if last_sign == +1: delta /= 2
+                if last_sign == +1:
+                    delta /= 2
                 self.__mu -= delta
                 last_sign = -1
 
+
     def __update_gb(self):
         """
-        Updates the phonon propagator D(iω) using bare D₀ and self-energy Σ_b.
+        Updates the interacting bosonic (phonon) propagator D(iωₙ) in Matsubara frequency space.
+
+        This is done by dressing the bare propagator D₀(iωₙ) with the bosonic self-energy Σ_b(iωₙ),
+        using Dyson's equation for bosons:
+
+            D(iωₙ) = [D₀⁻¹(iωₙ) - Σ_b(iωₙ)]⁻¹
+
+        The result is then fitted into the IR basis and stored in self.__dl.
         """
+        
+        # Compute the bare propagator D₀(iωₙ) for Einstein phonons
+        # D₀(iωₙ) = 2ω₀ / (ωₙ² - ω₀²)
         d0iw = (2 * self.w0 / (self.freqb**2 - self.w0**2)).real
+
+        # Compute dressed propagator via Dyson equation: D = [D₀⁻¹ - Σ_b]⁻¹
         diw = (d0iw**(-1) - self.sebiw)**(-1)
+
+        # Fit the result into the bosonic IR basis
         self.__dl = self.smatb.fit(diw).real
+
 
     # ------------- Main solver loop -------------
 
     def solve(self, diis_active=True, tol=1e-6, max_iter=10000):
         """
-        Run full self-consistent Dyson iteration with optional DIIS acceleration.
+        Perform the full self-consistent Dyson equation solver loop.
+
+        This iterative process updates the Green's function and self-energies until convergence.
+        Optionally uses Direct Inversion of the Iterative Subspace (DIIS) to accelerate convergence.
+
+        Parameters:
+        - diis_active (bool): Whether to use DIIS extrapolation to accelerate convergence.
+        - tol (float): Convergence threshold (based on change in gloc).
+        - max_iter (int): Maximum number of SCF iterations allowed.
         """
+        
+        # Disable DIIS explicitly if memory is set to zero
         if self.diis_mem == 0:
             diis_active = False
 
+        # Open log file for writing output (e.g., convergence messages)
         out_fl = open(self.__fl, 'w')
+
+        # Log simulation parameters
         fprint("Starting execution with the following parameters", file=out_fl)
         for name in ["T", "beta", "wM", "N", "t", "U", "J", "Jphm", "w0", "g", "lbd", "k_sz", "diis_mem"]:
             fprint(f"{name}={getattr(self, name):.3f}", file=out_fl)
         fprint("-" * 15 + "\n", file=out_fl)
 
-        # Initial G, D update
+        # Initial guess for non-interacting Green's function and phonon propagator
         fprint("Computing non-interacting Green's function", file=out_fl)
         self.__update_green(out_fl)
         self.__update_gb()
         fprint('\n'*2, file=out_fl)
 
-        iterations = 0
+        iterations = 0  # SCF iteration counter
+
         while True:
+            # Backup current Green's function to compare for convergence
             last_g = ohcopy(self.glocl)
+
             fprint(f"Starting iteration {iterations + 1}", file=out_fl)
             fprint("Updating self-energies", file=out_fl)
 
-            # Compute all components of Σ
+            # Compute all components of the total self-energy Σ = Σ_HF + Σ_phm + Σ_2B + Σ_eph + Σ_B
             self_energy.update_sehf(self)
             self_energy.update_sephm(self)
             self_energy.update_se2b(self)
             self_energy.update_seep(self)
             self_energy.update_seb(self)
 
-            # DIIS acceleration (if enabled)
+            # =============== DIIS acceleration block ===============
             if diis_active:
+                # Shift memory buffer for DIIS vectors
                 self.__diis_vals[:-1] = ohcopy(self.__diis_vals[1:])
                 self.__diis_err[:-1] = ohcopy(self.__diis_err[1:])
-                self.__diis_vals[-1,0] = ohcopy(self.sehf)
-                self.__diis_vals[-1,1:] = ohcopy(self.se2btau)
+
+                # Store current iteration in DIIS buffer (Σ_HF + Σ_2B)
+                self.__diis_vals[-1, 0] = ohcopy(self.sehf)
+                self.__diis_vals[-1, 1:] = ohcopy(self.se2btau)
+
+                # Error vector = ΔΣ between current and previous step
                 self.__diis_err[-1] = self.__diis_vals[-1] - self.__diis_vals[-2]
 
+                # Start extrapolation if enough vectors accumulated
                 if iterations >= self.diis_mem:
                     fprint("Starting DIIS extrapolation", file=out_fl)
+
+                    # Build error matrix B[i,j] = (error_i ⋅ error_j)
                     B = np.zeros((self.diis_mem,) * 2)
                     for i in range(self.diis_mem):
                         for j in range(i, self.diis_mem):
                             B[i, j] = np.sum((self.__diis_err[i] * self.__diis_err[j]).trace)
-                            if i != j: B[j, i] = B[i, j]
+                            if i != j:
+                                B[j, i] = B[i, j]
                     B /= np.mean(B)
+
+                    # Solve Bc = 1 for DIIS weights
                     try:
                         Binv = np.linalg.inv(B)
                     except:
-                        Binv = np.linalg.inv(B + np.eye(self.diis_mem)*1e-8)
+                        Binv = np.linalg.inv(B + np.eye(self.diis_mem) * 1e-8)  # regularization
                     c_prime = Binv @ np.ones((self.diis_mem,))
                     c = c_prime / np.sum(c_prime)
+
+                    # Log weights
                     for k in range(self.diis_mem):
                         fprint(f"c{k} = {c[k]:.8f}", file=out_fl)
+
+                    # Weighted sum of Σ vectors using DIIS coefficients
                     seext = ohsum(c[:, None] * self.__diis_vals, axis=0)
                     self.__sehf = seext[0]
                     self.__se2bl = ohfit(self.stauf, seext[1:])
+
+                    # Save back to buffer
                     self.__diis_vals[-1] = ohcopy(seext)
                     self.__diis_err[-1] = self.__diis_vals[-1] - self.__diis_vals[-2]
+            # =============== End DIIS block ===============
 
+            # Update Green's function and phonon propagator for new Σ
             fprint("Computing gloc", file=out_fl)
             self.__update_green(out_fl)
             fprint("Computing phonon propagator", file=out_fl)
@@ -311,10 +402,11 @@ class DysonSolver:
             fprint(f"Expected phononic excitations is {-2*np.sum(self.irbb.u(self.beta)*self.dl):.5f}", file=out_fl)
             fprint('\n', file=out_fl)
 
-            # Convergence check
+            # Check for convergence by computing change in Green's function
             iterations += 1
             conv = np.sum(((self.glocl - last_g)**2).sqrt().trace)
             self.__conv_ls.append(conv)
+
             fprint(f"iteration {iterations} finished with convergence {conv:.8e}", file=out_fl)
             fprint('-'*15, file=out_fl)
             fprint('\n'*2, file=out_fl)
@@ -330,10 +422,10 @@ class DysonSolver:
                 out_fl.close()
                 return
 
-            # Check for convergence stagnation
+            # Loop stagnation detection: check if convergence hasn't improved recently
             if iterations >= 5:
                 loop_stuck = all(
-                    abs(conv - self.conv_ls[-1 - ii]) <= tol/1000
+                    abs(conv - self.conv_ls[-1 - ii]) <= tol / 1000
                     for ii in range(1, 5)
                 )
                 if loop_stuck:

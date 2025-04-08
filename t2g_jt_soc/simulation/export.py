@@ -47,7 +47,6 @@ def export_solver_to_hdf5(solver, path):
         f.create_dataset("glocl_a", data = solver.glocl.a)              # Local Green's function (diagonal)
         f.create_dataset("glocl_b", data = solver.glocl.b)              # Local Green's function (off-diagonal)
 
-        # (commented out: full k-resolved Green’s functions can be large)
         # f.create_dataset("gkl_a", data = solver.gkl.a)
         # f.create_dataset("gkl_b", data = solver.gkl.b)
 
