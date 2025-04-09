@@ -11,5 +11,5 @@ LAT_CSV_HEADER = [
     'k_sz', 'diis_mem', 'timestamp'
 ]
 
-LAT_OUTPUT_DIR = "t2g_jt_soc/lat_data/lat_results"  # Save path
+LAT_OUTPUT_DIR = "t2g_jt_soc/lat_data/lat_results"  
 LAT_CSV_DIR = "t2g_jt_soc/lat_data/simulated_values_lat.csv"

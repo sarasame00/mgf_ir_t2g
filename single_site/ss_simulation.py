@@ -3,18 +3,6 @@ from scipy.sparse import lil_matrix
 from itertools import combinations
 import time
 import os
-'''
-# === Parameters ===
-
-U = 2.5          # Hubbard intra-orbital Coulomb repulsion (eV)
-J = 0.2          # Hund's rule exchange coupling (eV)
-g = 0.1          # Jahn-Teller coupling strength (dimensionless)
-B = 0.1          # Harmonic trapping potential (restoring force coefficient)
-size_grid = 101  # Number of points along each Q axis (Qx, Qy) for energy map
-Qmax = 1.2       # Maximum value for Jahn-Teller distortion coordinates Qx and Qy
-N_values = range(1, 6)  # Electron occupations to consider (N = 1 to 5)
-lb_values = [0, 0.1, 0.3, 0.5]  # Spin-orbit coupling strengths λ (eV)
-'''
 
 def basisFock(num_modes):
     '''
@@ -216,6 +204,7 @@ def Hjt(g, qx, qy):
     orbital imbalance.
 
     Parameters:
+    - g (float): Jahn-Teller coupling constant
     - qx (float): Jahn-Teller distortion component along Q₂ mode (orthorhombic)
     - qy (float): Jahn-Teller distortion component along Q₃ mode (tetragonal)
 
@@ -223,47 +212,55 @@ def Hjt(g, qx, qy):
     - Hjt (scipy.sparse.lil_matrix): Jahn-Teller interaction Hamiltonian in second quantization
     '''
 
-    return g * (  # Global JT coupling constant
+    return g * (  
         qy * (nyz - nzx) / np.sqrt(3) +      # Orthorhombic Q₃ mode: imbalance between yz and zx
         qx * (2 * Nop / 3 - nyz - nzx)       # Tetragonal Q₂ mode: deviation from spherical symmetry
     )
 
 
 def eigobj(x, U, J, lb, N, B, g):
-    '''
-    Computes the lowest eigenvalue of the total Hamiltonian restricted to a specific particle-number subspace.
+    """
+    Compute the lowest eigenvalue of the Hamiltonian for a given Jahn-Teller distortion (Qx, Qy),
+    restricted to the subspace with total particle number N.
 
-    This includes:
+    The Hamiltonian includes:
     - Kanamori interaction
     - Spin-orbit coupling
     - Jahn-Teller distortion
-    - Harmonic confinement potential (Q²)
+    - Harmonic confinement potential
 
     Parameters:
-    - x (tuple): Coordinates (Qx, Qy) for the Jahn-Teller distortion
-    - N (int): Index corresponding to a specific particle-number subspace
+    - x (tuple): (Qx, Qy) distortion coordinates
+    - U (float): Intra-orbital Coulomb repulsion
+    - J (float): Hund's exchange coupling
+    - lb (float): Spin-orbit coupling strength
+    - N (int): Total electron count
+    - B (float): Harmonic confinement strength
+    - g (float): Jahn-Teller coupling
 
     Returns:
-    - float: Lowest eigenvalue (ground state energy) in subspace N, with harmonic potential added
-    '''
+    - float: Ground state energy (lowest eigenvalue + harmonic potential)
+    """
 
-    sl = {  # Dictionary of slice ranges to isolate subspaces by total occupation number
-        0: slice(0, 1),        # N = 0
-        1: slice(1, 7),        # N = 1
-        2: slice(7, 22),       # N = 2
-        3: slice(22, 42),      # N = 3
-        4: slice(42, 57),      # N = 4
-        5: slice(57, 63),      # N = 5
-        6: slice(63, 64)       # N = 6
+    # Mapping from particle number N to Hamiltonian subspace slice
+    sl = {
+        0: slice(0, 1),
+        1: slice(1, 7),
+        2: slice(7, 22),
+        3: slice(22, 42),
+        4: slice(42, 57),
+        5: slice(57, 63),
+        6: slice(63, 64)
     }
 
-    # Construct the full Hamiltonian and project onto the subspace with N particles
-    HN = (HK(U, J) + Hsoc(lb) + Hjt(g, x[0], x[1]))[sl[N], sl[N]]
+    # Build full Hamiltonian and extract N-particle subspace
+    H_full = HK(U, J) + Hsoc(lb) + Hjt(g, x[0], x[1])
+    HN = H_full[sl[N], sl[N]]
 
-    # Compute the eigenvalues of the projected Hamiltonian (converted to dense array)
+    # Compute eigenvalues in the N-particle subspace
     w = np.linalg.eigvalsh(HN.toarray())
 
-    # Return the ground state energy plus harmonic trapping potential: (B/2)(Qx² + Qy²)
+    # Add harmonic confinement energy to the lowest eigenvalue
     return w[0] + 0.5 * B * (x[0]**2 + x[1]**2)
 
 

@@ -5,33 +5,37 @@ from .ss_settings import SS_CONSTANTS
 
 def generate_lat_grid(preset, resolution):
     """
-    Generate all possible combinations of parameters for a given electron configuration preset.
+    Generate all possible combinations of parameters for a given electron configuration preset
+    to be used in lattice model simulations (DysonSolver-compatible).
 
     Parameters:
     - preset (str): One of '3d_d1', '4d_d1', '5d_d1', '5d_d5', etc.
-    - resolution (int): Number of values per range parameter (for np.linspace)
+    - resolution (int): Number of sampled values per parameter range (used in linspace)
 
     Returns:
-    - List of tuples formatted for DysonSolver:
+    - List of tuples formatted as:
       (T, wmax, N, t, U, J, Jphm, w0, g, lbd, k_sz, diis_mem)
     """
+    # Load model-specific parameter ranges (N, U, J, g, lbd, etc.)
     model = get_parameter_ranges(preset, resolution)
+
+    # Load lattice-specific constants (T, wmax, w0, etc.)
     const = LAT_CONSTANTS
 
-    # Product of all parameter combinations
+    # Compute cartesian product of all parameter combinations
     param_grid = product(
-        const["T"],
-        [const["wmax"]],
-        model["N"],
-        model["t"],
-        model["U"],
-        model["J"],
-        model["Jphm"],
-        [const["w0"]],
-        model["g"],
-        model["lbd"],
-        [const["k_sz"]],
-        [const["diis_mem"]],
+        const["T"],           # Temperature values
+        [const["wmax"]],      # Max frequency (fixed)
+        model["N"],           # Electron counts
+        model["t"],           # Hopping
+        model["U"],           # Hubbard U
+        model["J"],           # Hund's coupling
+        model["Jphm"],        # Phonon exchange
+        [const["w0"]],        # Phonon frequency (fixed)
+        model["g"],           # Jahn-Teller coupling
+        model["lbd"],         # Spin-orbit coupling
+        [const["k_sz"]],      # Momentum projection (fixed)
+        [const["diis_mem"]],  # DIIS memory (fixed)
     )
 
     return list(param_grid)
@@ -39,29 +43,32 @@ def generate_lat_grid(preset, resolution):
 
 def generate_ss_grid(preset="3d_d1", resolution=3):
     """
-    Generate all possible combinations of single-site parameters.
+    Generate all possible combinations of parameters for single-site simulations.
 
     Parameters:
     - preset (str): One of '3d_d1', '4d_d1', '5d_d1', etc.
     - resolution (int): Number of values to sample per parameter range
 
     Returns:
-    - List of tuples:
+    - List of tuples formatted as:
       (N, U, J, g, lbd, B, Qmax, size_grid)
     """
+    # Load model-specific parameter ranges (N, U, J, g, lbd)
     model = get_parameter_ranges(preset, resolution)
+
+    # Load single-site constants (B, Qmax, grid size)
     const = SS_CONSTANTS
 
-    # Create cartesian product of model parameters
+    # Compute cartesian product of variable model parameters
     param_grid = product(
-        model["N"],
-        model["U"],
-        model["J"],
-        model["g"],
-        model["lbd"],
+        model["N"],      # Electron count
+        model["U"],      # Coulomb repulsion
+        model["J"],      # Hund's coupling
+        model["g"],      # Jahn-Teller strength
+        model["lbd"],    # Spin-orbit coupling
     )
 
-    # Append fixed constants to each parameter set
+    # Combine each parameter set with the constant values
     grid = [
         (N, U, J, g, lbd, const["B"], const["qmax"], const["size_grid"])
         for (N, U, J, g, lbd) in param_grid
