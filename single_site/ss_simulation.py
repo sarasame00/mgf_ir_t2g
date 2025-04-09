@@ -2,7 +2,8 @@ import numpy as np
 from scipy.sparse import lil_matrix
 from itertools import combinations
 import time
-
+import os
+'''
 # === Parameters ===
 
 U = 2.5          # Hubbard intra-orbital Coulomb repulsion (eV)
@@ -13,7 +14,7 @@ size_grid = 101  # Number of points along each Q axis (Qx, Qy) for energy map
 Qmax = 1.2       # Maximum value for Jahn-Teller distortion coordinates Qx and Qy
 N_values = range(1, 6)  # Electron occupations to consider (N = 1 to 5)
 lb_values = [0, 0.1, 0.3, 0.5]  # Spin-orbit coupling strengths λ (eV)
-
+'''
 
 def basisFock(num_modes):
     '''
@@ -206,7 +207,7 @@ def Hsoc(lb):
     return Hsoc  # Return the spin-orbit Hamiltonian as a sparse matrix
 
 
-def Hjt(qx, qy):
+def Hjt(g, qx, qy):
     '''
     Constructs the Jahn-Teller (JT) interaction Hamiltonian for t₂g orbitals.
 
@@ -228,7 +229,7 @@ def Hjt(qx, qy):
     )
 
 
-def eigobj(x, N=1):
+def eigobj(x, U, J, lb, N, B, g):
     '''
     Computes the lowest eigenvalue of the total Hamiltonian restricted to a specific particle-number subspace.
 
@@ -257,7 +258,7 @@ def eigobj(x, N=1):
     }
 
     # Construct the full Hamiltonian and project onto the subspace with N particles
-    HN = (HK(U, J) + Hsoc(lb) + Hjt(x[0], x[1]))[sl[N], sl[N]]
+    HN = (HK(U, J) + Hsoc(lb) + Hjt(g, x[0], x[1]))[sl[N], sl[N]]
 
     # Compute the eigenvalues of the projected Hamiltonian (converted to dense array)
     w = np.linalg.eigvalsh(HN.toarray())
@@ -266,45 +267,3 @@ def eigobj(x, N=1):
     return w[0] + 0.5 * B * (x[0]**2 + x[1]**2)
 
 
-# Start global timer
-total_start_time = time.time()
-
-# Loop over different spin-orbit coupling strengths
-for lb in lb_values:
-    print(f'\n{"=" * 40}\n→ Starting λ = {lb:.2f}\n{"=" * 40}\n')
-
-    # Create 2D grid for Qx and Qy
-    Qx, Qy = np.meshgrid(*(np.linspace(-Qmax, Qmax, size_grid),) * 2)
-
-    # Loop over different subspaces N
-    for N in N_values:
-        print(f'→ Solving for λ = {lb:.2f}, electron count N = {N}...')
-
-        start_time = time.time()  # Start timer for this computation
-
-        # Initialize energy map
-        emap = np.zeros((size_grid, size_grid))
-
-        # Compute lowest eigenvalue for each grid point
-        for i in range(size_grid):
-            for j in range(size_grid):
-                emap[i, j] = eigobj([Qx[i, j], Qy[i, j]], N)
-
-        # Normalize the energy map by subtracting the minimum value
-        emap -= np.min(emap)
-
-        # Save results to file
-        filename = f"{N}N_{int(10 * lb)}SOC_lowee.txt"
-        np.savetxt(
-            f"PaperFigs/T0data/{filename}",
-            np.array((Qx, Qy, emap)).reshape((3, emap.shape[0] * emap.shape[1])).T
-        )
-
-        # Print timing for this subspace
-        elapsed = time.time() - start_time
-        print(f'   ✓ Saved: {filename} — elapsed time: {elapsed:.2f} seconds')
-
-# Report total computation time
-total_elapsed = time.time() - total_start_time
-print(f'\n✅ All calculations completed in {total_elapsed:.2f} seconds.')
-print('=' * 40 + '\n')

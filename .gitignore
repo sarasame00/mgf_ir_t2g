@@ -27,12 +27,9 @@ Thumbs.db
 *.swo
 
 # --- Simulation output data ---
-t2g_jt_soc/data/logs/
-t2g_jt_soc/data/results/
-t2g_jt_soc/data/simulated_values.csv
+t2g_jt_soc/lat_data/
+single_site/ss_data/
 
-single_site/data/
-single_site/figures/
 
 # --- HDF5, binary, large files ---
 *.hdf5

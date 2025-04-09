@@ -3,8 +3,8 @@ import sparse_ir as ir
 
 from maths.ohmatrix import ohmatrix, ohsum, ohcopy, ohzeros
 from maths.utils import fprint, ohfit, ohevaluate
-from simulation import self_energy
-from simulation.export import export_solver_to_hdf5
+from lat_simulation import self_energy
+from lat_simulation.export import export_solver_to_hdf5
 
 
 class DysonSolver:
