@@ -11,5 +11,10 @@ LAT_CSV_HEADER = [
     'k_sz', 'diis_mem', 'timestamp'
 ]
 
-LAT_OUTPUT_DIR = "t2g_jt_soc/lat_data/lat_results"  
-LAT_CSV_DIR = "t2g_jt_soc/lat_data/simulated_values_lat.csv"
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+LAT_CSV_DIR = BASE_DIR / "t2g_jt_soc" / "lat_data" / "simulated_values_lat.csv"
+LAT_OUTPUT_DIR = BASE_DIR / "t2g_jt_soc" / "lat_data" / "lat_results"
+

@@ -4,8 +4,14 @@ SS_CONSTANTS = {
     "B": 0.1
 }
 
-SS_OUTPUT_DIR = "single_site/ss_data/ss_results"  # Save path
-SS_CSV_DIR = "single_site/ss_data/simulated_values_ss.csv"
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+SS_CSV_DIR = BASE_DIR / "single_site" / "ss_data" / "simulated_values_ss.csv"
+SS_OUTPUT_DIR = BASE_DIR / "single_site" / "ss_data" / "ss_results"
+
+
 SS_CSV_HEADER = [
     'N', 'U', 'J', 'g', 'lbd', 'B', 'qmax', 'size_grid', 'timestamp'
 ]

@@ -9,7 +9,7 @@ from single_site.ss_runner import run_all_ss_simulations
 
 
 PRESET = "4d_d1"         # Choose from: '3d_d1', '4d_d1', '5d_d1', etc.
-RESOLUTION = 3           # Parameter resolution (per dimension)
+RESOLUTION = 5           # Parameter resolution (per dimension)
 
 
 if __name__ == "__main__":
