@@ -24,13 +24,13 @@ def generate_lat_grid(preset, resolution):
 
     # Compute cartesian product of all parameter combinations
     param_grid = product(
-        const["T"],           # Temperature values
+        [const["T"]],           # Temperature values
         [const["wmax"]],      # Max frequency (fixed)
         model["N"],           # Electron counts
         model["t"],           # Hopping
         model["U"],           # Hubbard U
         model["J"],           # Hund's coupling
-        model["Jphm"],        # Phonon exchange
+        [const["Jphm"]],        # Phonon exchange
         [const["w0"]],        # Phonon frequency (fixed)
         model["g"],           # Jahn-Teller coupling
         model["lbd"],         # Spin-orbit coupling
@@ -56,7 +56,7 @@ def generate_ss_grid(preset="3d_d1", resolution=3):
     # Load model-specific parameter ranges (N, U, J, g, lbd)
     model = get_parameter_ranges(preset, resolution)
 
-    # Load single-site constants (B, Qmax, grid size)
+    # Load single-site constants (Qmax, grid size)
     const = SS_CONSTANTS
 
     # Compute cartesian product of variable model parameters
@@ -66,12 +66,10 @@ def generate_ss_grid(preset="3d_d1", resolution=3):
         model["J"],      # Hund's coupling
         model["g"],      # Jahn-Teller strength
         model["lbd"],    # Spin-orbit coupling
+        model["B"],
+        [const["qmax"]], 
+        [const["size_grid"]]
+        
     )
 
-    # Combine each parameter set with the constant values
-    grid = [
-        (N, U, J, g, lbd, const["B"], const["qmax"], const["size_grid"])
-        for (N, U, J, g, lbd) in param_grid
-    ]
-
-    return grid
+    return list(param_grid)

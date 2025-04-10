@@ -1,7 +1,6 @@
 SS_CONSTANTS = {
     "qmax": 1.2, # Grid range [-QMAX, QMAX]
     "size_grid": 101,
-    "B": 0.1
 }
 
 from pathlib import Path

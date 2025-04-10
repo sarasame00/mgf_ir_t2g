@@ -28,7 +28,7 @@ def run_ss_simulation(param_tuple):
     """
     N, U, J, g, lbd, B, Qmax, size_grid = param_tuple
 
-    safe_print(f"\nRunning simulation for N={N}, U={U:.2f}, J={J:.2f}, g={g:.3f}, lbd={lbd:.3f}")
+    safe_print(f"\nRunning simulation for N={N}, U={U:.2f}, J={J:.2f}, g={g:.3f}, B={B:.3f}, lbd={lbd:.3f}")
 
     # Check if this parameter set has already been completed
     already = set()

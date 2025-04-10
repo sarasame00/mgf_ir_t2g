@@ -18,7 +18,8 @@ param_values = {
     "U": sorted([float(v) for v in df["U"].unique()]),
     "J": sorted([float(v) for v in df["J"].unique()]),
     "g": sorted([float(v) for v in df["g"].unique()]),
-    "lbd": sorted([float(v) for v in df["lbd"].unique()])
+    "lbd": sorted([float(v) for v in df["lbd"].unique()]),
+    "B": sorted([float(v) for v in df["B"].unique()])
 }
 
 
@@ -65,11 +66,11 @@ app.layout = html.Div(
     Output("energy-map", "figure"),
     [Input(f"slider-{param}", "value") for param in param_values]
 )
-def update_figure(N, U, J, g, lbd):
-    print(f"\n▶ Selected params: N={N}, U={U}, J={J}, g={g}, lbd={lbd}")
+def update_figure(N, U, J, g, B, lbd):
+    print(f"\n▶ Selected params: N={N}, U={U}, J={J}, g={g}, B={B}, lbd={lbd}")
 
     match = df[(df["N"] == N) & (df["U"] == U) & (df["J"] == J) &
-               (df["g"] == g) & (df["lbd"] == lbd)]
+               (df["g"] == g) & (df["B"] == B) & (df["lbd"] == lbd)]
 
     if match.empty:
         print("❌ No matching row found in CSV.")
@@ -108,7 +109,7 @@ def update_figure(N, U, J, g, lbd):
         zmax=zmax
     )
     fig.update_layout(
-        title=f"Ground State Energy — N={N}, U={U}, J={J}, g={g}, λ={lbd}",
+        title=f"Ground State Energy — N={N}, U={U}, J={J}, g={g}, B={B}, λ={lbd}",
         transition_duration=300
     )
     return fig

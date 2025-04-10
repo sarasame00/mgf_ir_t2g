@@ -22,7 +22,7 @@ def get_parameter_ranges(preset: str, resolution: int = 3):
             "J": (0.6, 1.2),
             "lbd": (0.02, 0.07),
             "g": (0.1, 0.2),
-            "Jphm": (0.1, 0.2),
+            "B": (0.1, 0.2),
         },
         "4d_d1": {
             "N": [1],
@@ -31,7 +31,7 @@ def get_parameter_ranges(preset: str, resolution: int = 3):
             "J": (0.4, 0.6),
             "lbd": (0.1, 0.2),
             "g": (0.02, 0.1),
-            "Jphm": (0.02, 0.1),
+            "B": (0.02, 0.1),
         },
         "5d_d1": {
             "N": [1],
@@ -40,7 +40,7 @@ def get_parameter_ranges(preset: str, resolution: int = 3):
             "J": (0.2, 0.5),
             "lbd": (0.2, 0.4),
             "g": (0.0, 0.02),
-            "Jphm": (0.0, 0.02),
+            "B": (0.0, 0.02),
         }
     }
 
