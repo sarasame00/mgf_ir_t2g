@@ -223,8 +223,9 @@ class DysonSolver:
                 # Full k-resolved Green's function G_k(iωₙ)
                 gkiw = (
                     self.freqf[:, None, None, None] - self.Hlatt[None, :, :, :]  # ε_k
-                    - self.sehf                                                   # Static HF self-energy
-                    - self.sephm[None, :, :, :]                                   # Momentum-dependent self-energy
+                    - self.sehf     
+                    - self.se2biw[:,None,None,None]                                              # Static HF self-energy
+                    - self.sephm[None, :, :, :]      #AQUIIIII                            # Momentum-dependent self-energy
                     - 2 * self.seepiw[:, None, None, None]                        # Dynamical e-ph self-energy
                     + self.mu                                                     # Chemical potential
                     - 0.5 * self.lbd * ohmatrix(0, 1)                              # Spin-orbit term
@@ -241,6 +242,8 @@ class DysonSolver:
                 glociw = (
                     self.freqf
                     - self.sehf
+                    - self.se2biw
+                     - self.sephm[None, :, :, :]
                     - 2 * self.seepiw
                     + self.mu
                     - 0.5 * self.lbd * ohmatrix(0, 1)

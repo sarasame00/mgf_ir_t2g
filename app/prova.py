@@ -6,7 +6,7 @@ from dash import Dash, dcc, html, Input, Output, callback
 from matplotlib.colors import LinearSegmentedColormap, to_hex
 
 # === Load parameter log ===
-df = pd.read_csv("/Users/sarasalesmerino/Desktop/ICMAB/mgf_ir_t2g/single_site/ss_data/simulated_values_ss.csv")  # <-- Update with actual path
+df = pd.read_csv("/Users/sarasalesmerino/Desktop/ICMAB/mgf_ir_t2g/single_site/ss_data/simulated_values_ss.csv")  
 
 # === Simulation output folder ===
 data_dir = "/Users/sarasalesmerino/Desktop/ICMAB/mgf_ir_t2g/single_site/ss_data/ss_results/"
@@ -66,14 +66,14 @@ app.layout = html.Div(
     Output("energy-map", "figure"),
     [Input(f"slider-{param}", "value") for param in param_values]
 )
-def update_figure(N, U, J, g, B, lbd):
-    print(f"\n▶ Selected params: N={N}, U={U}, J={J}, g={g}, B={B}, lbd={lbd}")
+def update_figure(N, U, J, g, lbd, B):
+    print(f"\n▶ Selected params: N={N}, U={U}, J={J}, g={g}, lbd={lbd}, B={B}")
 
     match = df[(df["N"] == N) & (df["U"] == U) & (df["J"] == J) &
                (df["g"] == g) & (df["B"] == B) & (df["lbd"] == lbd)]
 
     if match.empty:
-        print("❌ No matching row found in CSV.")
+        print(f"❌ No matching row found in CSV.")
         fig = px.imshow(np.zeros(shape), color_continuous_scale=plotly_colorscale)
         fig.update_layout(title="No matching simulation found")
         return fig
