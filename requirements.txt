@@ -10,3 +10,5 @@ csv
 tqdm
 joblib
 xprec
+dotenv
+# huggingface_hub
