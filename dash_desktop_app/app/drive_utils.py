@@ -3,9 +3,11 @@ from google.oauth2 import service_account
 import io
 import numpy as np
 import requests
+import os
+from pathlib import Path
 
 # === CONFIG ===
-SERVICE_ACCOUNT_FILE = "drive_service_account.json"
+SERVICE_ACCOUNT_FILE = Path(__file__).parent.parent / "drive_service_account.json"
 FOLDER_ID = '1qroO12tPkKu6c3w5Xy-2Reys5XFcbX5L'
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 

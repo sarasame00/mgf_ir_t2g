@@ -66,3 +66,7 @@ dist/
 
 # Google Cloud credentials
 *.json
+
+# Node / Electron
+dash_desktop_app/electron/node_modules/
+dash_desktop_app/electron/dist/
