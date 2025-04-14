@@ -60,3 +60,5 @@ dist/
 *.tar.gz
 *.zip
 *.pdf
+
+.env
