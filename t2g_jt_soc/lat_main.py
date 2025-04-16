@@ -8,10 +8,10 @@ from config.grid_builder import generate_lat_grid
 from t2g_jt_soc.lat_simulation.lat_runner import run_all_simulations
 
 
-PRESET = "3d_d1"
+PRESET = "3d_d1_r1"
 RESOLUTION = 4
 
 if __name__ == "__main__":
     grid = generate_lat_grid(PRESET, RESOLUTION)
-
+    print(grid)
     run_all_simulations(grid, parallel=False)

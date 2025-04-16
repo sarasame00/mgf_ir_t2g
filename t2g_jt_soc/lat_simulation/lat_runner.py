@@ -51,7 +51,7 @@ def run_single_simulation(val):
     out_path = os.path.join(LAT_OUTPUT_DIR, now)
 
     # Log the simulation start (clean print)
-    safe_print(f"🚀 Starting → T={val[0]} N={val[2]} U={val[4]} g={val[8]} lbd={val[9]}")
+    safe_print(f"🚀 Starting → N={val[2]} t={val[3]} U={val[4]} J={val[5]} lbd={val[9]} g={val[8]}")
 
     # Run the solver for this parameter set
     solver = DysonSolver(*val, fl=out_path + ".out")
