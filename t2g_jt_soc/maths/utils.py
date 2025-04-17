@@ -1,4 +1,3 @@
-import numpy as np
 from .ohmatrix import ohmatrix
 
 def ohfit(sampling, M, **kwargs):

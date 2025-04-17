@@ -15,7 +15,7 @@ def get_parameter_ranges(preset: str, resolution: int = 3):
 
     # Define supported presets
     presets = {
-        "3d_d1": {
+        "3d_d1_range": {
             "N": [1],
             "t": (0.1, 0.3),
             "U": (3.0, 6.0),
@@ -24,7 +24,7 @@ def get_parameter_ranges(preset: str, resolution: int = 3):
             "g": (0.1, 0.2),
             "B": (0.1, 0.2),
         },
-        "4d_d1": {
+        "4d_d1_range": {
             "N": [1],
             "t": (0.3, 0.5),
             "U": (1.5, 3.0),
@@ -33,7 +33,7 @@ def get_parameter_ranges(preset: str, resolution: int = 3):
             "g": (0.02, 0.1),
             "B": (0.02, 0.1),
         },
-        "5d_d1": {
+        "5d_d1_range": {
             "N": [1],
             "t": (0.6, 1.0),
             "U": (1.0, 3.0),
@@ -41,6 +41,33 @@ def get_parameter_ranges(preset: str, resolution: int = 3):
             "lbd": (0.2, 0.4),
             "g": (0.0, 0.02),
             "B": (0.0, 0.02),
+        },
+        "3d_d1_r1": {
+            "N": [1],
+            "t": [0.1, 0.3],
+            "U": [5],
+            "J": [0.8],
+            "lbd": [0.02, 0.07],
+            "g": [0.1],
+            "B": [0.1],
+        },
+        "4d_d1_r1": {
+            "N": [1],
+            "t": [0.3, 0.5],
+            "U": [2.5],
+            "J": [0.5],
+            "lbd": [0.1, 0.2],
+            "g": [0.02],
+            "B": [0.02],
+        },
+        "5d_d1_r1": {
+            "N": [1],
+            "t": [0.6, 1.0],
+            "U": [2],
+            "J": [0.3],
+            "lbd": [0.2, 0.4],
+            "g": [0.01],
+            "B": [0.01],
         }
     }
 
