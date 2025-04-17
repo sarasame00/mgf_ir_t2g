@@ -57,17 +57,17 @@ def update_se2b(solver):
 
     # Diagonal (a) component of Σ₂^el in τ
     se2btau_a = (
-        -(5*solver.U**2 - 20*solver.U*solver.J + 28*solver.J**2)*a**2*ab_rev
-        -8*(solver.U**2 - 4*solver.U*solver.J + 3*solver.J**2)*a*b*bb_rev
-        +2*(solver.U**2 - 4*solver.U*solver.J + 5*solver.J**2)*b**2*(ab_rev + bb_rev)
+        (5*solver.U**2 - 20*solver.U*solver.J + 28*solver.J**2)*a**2*ab_rev
+        +8*(solver.U**2 - 4*solver.U*solver.J + 3*solver.J**2)*a*b*bb_rev
+        -2*(solver.U**2 - 4*solver.U*solver.J + 5*solver.J**2)*b**2*(ab_rev + bb_rev)
     )
 
     # Off-diagonal (b) component of Σ₂^el in τ
     se2btau_b = (
-        -(solver.U**2 - 4*solver.U*solver.J + 5*solver.J**2)*a**2*bb_rev
-        +2*(solver.U**2 - 2*solver.U*solver.J + 3*solver.J**2)*a*b*(2*ab_rev - bb_rev)
-        -(solver.U**2 - 4*solver.U*solver.J + 3*solver.J**2)*b**2*ab_rev
-        +(9*solver.U**2 - 36*solver.U*solver.J + 38*solver.J**2)*b**2*bb_rev
+        (solver.U**2 - 4*solver.U*solver.J + 5*solver.J**2)*a**2*bb_rev
+        -2*(solver.U**2 - 2*solver.U*solver.J + 3*solver.J**2)*a*b*(2*ab_rev - bb_rev)
+        +(solver.U**2 - 4*solver.U*solver.J + 3*solver.J**2)*b**2*ab_rev
+        -(9*solver.U**2 - 36*solver.U*solver.J + 38*solver.J**2)*b**2*bb_rev
     )
 
     # Fit τ-grid self-energy to IR basis

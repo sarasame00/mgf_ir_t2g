@@ -4,7 +4,11 @@ import numpy as np
 from maths.ohmatrix import ohsum, ohmatrix
 from maths.utils import ohfit
 
-def export_solver_to_hdf5(solver, path):
+import os
+from drive_utils import upload_file_to_drive  
+from config.lat_settings import LAT_GD_ID_DIR
+
+def export_solver_to_hdf5(solver, path, upload_to_drive=True):
     """
     Exports all relevant quantities from a solved DysonSolver instance to an HDF5 file.
     This includes input parameters, Green's functions, self-energies, observables, and correlators.
@@ -153,3 +157,13 @@ def export_solver_to_hdf5(solver, path):
         f.create_dataset("correlcrs1", data=corrcrs1)
         f.create_dataset("correlcrs2", data=corrcrs2)
         f.create_dataset("irrBZ", data=qidxs)  # Stored q-points in irreducible zone
+
+    # Optionally upload to Google Drive
+    full_path = path + '.hdf5'
+    if upload_to_drive and os.path.exists(full_path):
+        upload_file_to_drive(
+            filepath=full_path,
+            filename=os.path.basename(full_path),
+            parent_id=LAT_GD_ID_DIR,
+            overwrite=True  
+        )

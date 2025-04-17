@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.express as px
 from dash import Dash, dcc, html, Input, Output, callback
 from matplotlib.colors import LinearSegmentedColormap, to_hex
-from .drive_utils import get_file_id_by_name, download_txt_file, creds
+from ...drive_utils import get_file_id_by_name, download_txt_file, creds
 import requests, io
 
 # === CONFIG ===

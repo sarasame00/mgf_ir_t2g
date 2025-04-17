@@ -10,6 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SS_CSV_DIR = BASE_DIR / "single_site" / "ss_data" / "simulated_values_ss.csv"
 SS_OUTPUT_DIR = BASE_DIR / "single_site" / "ss_data" / "ss_results"
 
+SS_GD_ID_DIR = '1VPQ4HARo7HJVXoXWRhVYYn79Svs3IZWq' #ID of the direcoctory to save the files in GDrive
 
 SS_CSV_HEADER = [
     'N', 'U', 'J', 'g', 'lbd', 'B', 'qmax', 'size_grid', 'timestamp'

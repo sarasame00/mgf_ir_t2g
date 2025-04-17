@@ -7,7 +7,10 @@ from tqdm import tqdm
 from multiprocessing import Lock
 
 from single_site.ss_simulation import eigobj
-from config.ss_settings import SS_OUTPUT_DIR, SS_CSV_DIR, SS_CSV_HEADER
+from config.ss_settings import SS_OUTPUT_DIR, SS_CSV_DIR, SS_GD_ID_DIR, SS_CSV_HEADER
+
+import os
+from drive_utils import upload_file_to_drive, get_completed_params_from_drive
 
 # Lock to ensure thread-safe printing when running in parallel
 print_lock = Lock()
@@ -16,7 +19,7 @@ def safe_print(*args, **kwargs):
     with print_lock:
         print(*args, **kwargs)
 
-def run_ss_simulation(param_tuple):
+def run_ss_simulation(param_tuple, upload_to_drive=True):
     """
     Run a single-site JT+SOC simulation and save the result.
 
@@ -30,18 +33,17 @@ def run_ss_simulation(param_tuple):
 
     safe_print(f"\nRunning simulation for N={N}, U={U:.2f}, J={J:.2f}, g={g:.3f}, B={B:.3f}, lbd={lbd:.3f}")
 
-    # Check if this parameter set has already been completed
-    already = set()
-    if os.path.exists(SS_CSV_DIR):
-        with open(SS_CSV_DIR, 'r') as f:
-            reader = csv.reader(f)
-            next(reader, None)  # Skip header
-            for line in reader:
-                already.add(tuple([float(s) for s in line[:-1]]))
+    # Round the param tuple before comparison (3 decimal places)
+    rounded_param = tuple(round(x, 3) for x in param_tuple)
 
-    if param_tuple in already:
-        safe_print(f"Skipping completed simulation: {param_tuple}")
+    already = get_completed_params_from_drive("simulated_values_ss.csv", SS_GD_ID_DIR)
+
+    if rounded_param in already:
+        safe_print(f"Skipping completed simulation: {rounded_param}")
         return
+    else:
+        safe_print(f"Running new simulation: {rounded_param}")
+
 
     # Generate a unique timestamp for the output file
     now = f"{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
@@ -68,15 +70,31 @@ def run_ss_simulation(param_tuple):
     filepath = os.path.join(SS_OUTPUT_DIR, str(now))
     np.savetxt(filepath, np.array((Qx, Qy, emap)).reshape((3, emap.size)).T)
 
+    if upload_to_drive and os.path.exists(filepath):
+        upload_file_to_drive(
+            filepath=filepath,
+            filename=str(now),
+            parent_id=SS_GD_ID_DIR,
+            overwrite=True  
+        )
+
     # Log the parameter set and timestamp to the CSV file
     with open(SS_CSV_DIR, 'a', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(list(param_tuple) + [int(now)])
 
+    # Optionally upload the updated CSV
+    if upload_to_drive and os.path.exists(SS_CSV_DIR):
+        upload_file_to_drive(
+            filepath=SS_CSV_DIR,
+            filename="simulated_values_ss.csv",
+            parent_id=SS_GD_ID_DIR,
+            overwrite=True  
+        )
     safe_print(f"Saved result to {filepath}")
     return emap
 
-def run_all_ss_simulations(param_tuples, n_jobs=-1, parallel=True):
+def run_all_ss_simulations(param_tuples, n_jobs=-1, parallel=True, upload_to_drive=True):
     """
     Run all single-site simulations using the given parameter grid.
 
@@ -94,12 +112,12 @@ def run_all_ss_simulations(param_tuples, n_jobs=-1, parallel=True):
     try:
         if parallel:
             Parallel(n_jobs=n_jobs)(
-                delayed(run_ss_simulation)(param_tuple)
+                delayed(run_ss_simulation)(param_tuple, upload_to_drive)
                 for param_tuple in tqdm(param_tuples, desc="Running simulations (parallel)")
             )
         else:
             for param_tuple in tqdm(param_tuples, desc="Running simulations (serial)"):
-                run_ss_simulation(param_tuple)
+                run_ss_simulation(param_tuple, upload_to_drive)
 
     except KeyboardInterrupt:
         safe_print("\n❌Simulation interrupted by user.")
