@@ -41,7 +41,7 @@ def generate_lat_grid(preset, resolution):
     return list(param_grid)
 
 
-def generate_ss_grid(preset="3d_d1", resolution=3):
+def generate_ss_grid(preset, resolution=3):
     """
     Generate all possible combinations of parameters for single-site simulations.
 
