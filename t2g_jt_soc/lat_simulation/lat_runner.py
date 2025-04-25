@@ -37,7 +37,7 @@ def run_single_simulation(val, upload_to_drive=True):
     # Round the param tuple before comparison (3 decimal places)
     rounded_param = tuple(round(x, 3) for x in val)
 
-    already = get_completed_params_from_drive("simulated_values_ss.csv", LAT_GD_ID_DIR)
+    already = get_completed_params_from_drive("simulated_values_lat.csv", LAT_GD_ID_DIR)
 
     if rounded_param in already:
         safe_print(f"Skipping completed simulation: {rounded_param}")
