@@ -78,14 +78,7 @@ def run_all_ss_simulations(param_tuples, n_jobs=-1, parallel=True, upload_to_dri
         # Filter nones
         all_new_rows = [row for row in results if row is not None]
 
-        # Update local CSV
-        with open(SS_CSV_DIR, 'a', newline='') as f:
-            writer = csv.writer(f)
-            for row in all_new_rows:
-                writer.writerow(row)
-
-        # Now safely upload once
-        update_and_upload_csv([], SS_CSV_DIR, SS_GD_ID_DIR, SS_CSV_NAME, SS_CSV_HEADER)
+        update_and_upload_csv(all_new_rows, SS_CSV_DIR, SS_GD_ID_DIR, SS_CSV_NAME, SS_CSV_HEADER)
 
     except KeyboardInterrupt:
         safe_print("\n❌ Simulation interrupted by user.")
