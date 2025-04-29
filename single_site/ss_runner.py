@@ -7,10 +7,10 @@ from tqdm import tqdm
 from multiprocessing import Lock
 
 from single_site.ss_simulation import eigobj
-from config.ss_settings import SS_OUTPUT_DIR, SS_CSV_DIR, SS_GD_ID_DIR, SS_CSV_HEADER
+from config.ss_settings import SS_OUTPUT_DIR, SS_CSV_DIR, SS_GD_ID_DIR, SS_CSV_HEADER, SS_CSV_NAME
 
 import os
-from drive_utils import upload_file_to_drive, get_completed_params_from_drive
+from drive_utils import upload_file_to_drive, get_completed_params_from_drive, update_and_upload_csv
 
 # Lock to ensure thread-safe printing when running in parallel
 print_lock = Lock()
@@ -78,19 +78,10 @@ def run_ss_simulation(param_tuple, upload_to_drive=True):
             overwrite=True  
         )
 
-    # Log the parameter set and timestamp to the CSV file
-    with open(SS_CSV_DIR, 'a', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(list(param_tuple) + [int(now)])
-
-    # Optionally upload the updated CSV
-    if upload_to_drive and os.path.exists(SS_CSV_DIR):
-        upload_file_to_drive(
-            filepath=SS_CSV_DIR,
-            filename="simulated_values_ss.csv",
-            parent_id=SS_GD_ID_DIR,
-            overwrite=True  
-        )
+    
+    # Upload csv
+    new_row = list(param_tuple) + [int(now)]
+    update_and_upload_csv(new_row, SS_CSV_DIR, SS_GD_ID_DIR, SS_CSV_NAME, SS_CSV_HEADER)
     safe_print(f"Saved result to {filepath}")
     return emap
 

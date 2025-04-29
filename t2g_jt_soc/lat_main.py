@@ -8,7 +8,7 @@ from config.grid_builder import generate_lat_grid
 from t2g_jt_soc.lat_simulation.lat_runner import run_all_simulations
 
 
-PRESET = "3d_d1_range"
+PRESET = "5d_d1_range"
 RESOLUTION = 3
 
 if __name__ == "__main__":

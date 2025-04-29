@@ -1,12 +1,15 @@
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
-from googleapiclient.http import MediaFileUpload
+from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 import io
 import numpy as np
 import requests
 import os
+import pandas as pd
 from pathlib import Path
 import csv
+
+
 # === CONFIG ===
 SERVICE_ACCOUNT_FILE = Path(__file__).parent / "drive_service_account.json"
 FOLDER_ID = '1qroO12tPkKu6c3w5Xy-2Reys5XFcbX5L'
@@ -93,20 +96,81 @@ def get_completed_params_from_drive(csv_filename, parent_folder_id):
     reader = csv.reader(io.StringIO(content))
     header = next(reader, None)  # skip header
 
-    completed = set(
-        tuple(round(float(s), 3) for s in row[:-1])
-        for row in reader
-        if len(row) >= 8  # make sure row is complete
-    )
+    completed = set()
+
+    for row in reader:
+        if len(row) < 8:
+            continue  # skip incomplete rows
+        try:
+            parsed = tuple(round(float(s), 3) for s in row[:-1])
+            completed.add(parsed)
+        except ValueError:
+            print(f"⚠️ Skipping row with invalid data: {row}")
+            continue  # skip bad rows
+
 
     return completed
+
+
+def download_csv_from_drive(local_path, parent_id, filename):
+    """Download a CSV file from Drive if exists."""
+    file_id = get_file_id_by_name(filename, parent_id)
+    if not file_id:
+        print(f"⚠️ No existing {filename} found in Drive. Starting fresh.")
+        return None
+    
+    request = drive_service.files().get_media(fileId=file_id)
+    fh = io.FileIO(local_path, 'wb')
+    downloader = MediaIoBaseDownload(fh, request)
+    done = False
+    while not done:
+        status, done = downloader.next_chunk()
+    print(f"    ↓ Downloaded {filename} from Drive.")
+    return local_path
+
+def upload_csv_to_drive(local_path, parent_id, filename):
+    """Upload (overwrite) CSV to Drive."""
+    file_id = get_file_id_by_name(filename, parent_id)
+    file_metadata = {'name': filename, 'parents': [parent_id]}
+    media = MediaFileUpload(local_path, resumable=True)
+
+    if file_id:
+        updated = drive_service.files().update(fileId=file_id, media_body=media).execute()
+        print(f"    ↻ Updated '{filename}' in Drive.")
+    else:
+        uploaded = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        print(f"    ✓ Uploaded new '{filename}' to Drive.")
+
+
+def update_and_upload_csv(new_row: list, local_csv_path, gd_id_dir, csv_name, header):
+    """Safely update the model-specific CSV with a new row and upload."""
+
+    # Download existing CSV if it exists
+    download_csv_from_drive(local_csv_path, gd_id_dir, csv_name)
+
+    if local_csv_path.exists():
+        df = pd.read_csv(local_csv_path)
+    else:
+        df = pd.DataFrame(columns=header)
+
+    # Create new_row as DataFrame with correct columns
+    new_df = pd.DataFrame([new_row], columns=header)
+
+    # Concatenate safely
+    combined_df = pd.concat([df, new_df], ignore_index=True).drop_duplicates()
+
+    # Save cleaned
+    combined_df.to_csv(local_csv_path, index=False)
+
+    # Upload back to Drive
+    upload_csv_to_drive(local_csv_path, gd_id_dir, csv_name)
 
 
 
 __all__ = [
     "get_file_id_by_name",
     "download_txt_file",
-    "upload_txt_file",
+    "upload_file_to_drive",
     "creds",
     "drive_service",
     "get_completed_params_from_drive"

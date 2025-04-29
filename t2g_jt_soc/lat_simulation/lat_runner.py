@@ -6,9 +6,9 @@ from tqdm import tqdm
 from multiprocessing import Lock
 
 from lat_simulation.dyson_solver import DysonSolver
-from config.lat_settings import LAT_CSV_HEADER, LAT_CSV_DIR, LAT_OUTPUT_DIR, LAT_GD_ID_DIR
+from config.lat_settings import LAT_CSV_HEADER, LAT_CSV_DIR, LAT_OUTPUT_DIR, LAT_GD_ID_DIR, LAT_CSV_NAME
 
-from drive_utils import upload_file_to_drive, get_completed_params_from_drive
+from drive_utils import update_and_upload_csv, get_completed_params_from_drive
 
 # Global print lock to avoid overlap in logs
 print_lock = Lock()
@@ -17,7 +17,7 @@ def safe_print(*args, **kwargs):
     with print_lock:
         print(*args, **kwargs)
 
-def run_single_simulation(val, upload_to_drive=True):
+def run_single_simulation(val):
     """
     Run a single DysonSolver simulation and record its result.
 
@@ -60,20 +60,11 @@ def run_single_simulation(val, upload_to_drive=True):
 
     # Log the simulation finish
     safe_print(f"✅ Finished → saved {now}")
+    
+    # Upload csv
+    new_row = list(val) + [int(now)]
+    update_and_upload_csv(new_row, LAT_CSV_DIR, LAT_GD_ID_DIR, LAT_CSV_NAME, LAT_CSV_HEADER)
 
-    # Append the result row to the CSV
-    with open(LAT_CSV_DIR, 'a', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(list(val) + [int(now)])
- 
-    # Optionally upload the updated CSV
-    if upload_to_drive and os.path.exists(LAT_CSV_DIR):
-        upload_file_to_drive(
-            filepath=LAT_CSV_DIR,
-            filename="simulated_values_lat.csv",
-            parent_id=LAT_GD_ID_DIR,
-            overwrite=True  
-        )
 
 def run_all_simulations(parameter_grid, n_jobs=-1, parallel=True, upload_to_drive=True):
     """
@@ -99,13 +90,13 @@ def run_all_simulations(parameter_grid, n_jobs=-1, parallel=True, upload_to_driv
         if parallel:
             # Run in parallel using joblib
             Parallel(n_jobs=n_jobs)(
-                delayed(run_single_simulation)(val, upload_to_drive)
+                delayed(run_single_simulation)(val)
                 for val in tqdm(parameter_grid, desc="Running simulations (parallel)")
             )
         else:
             # Run sequentially for debugging or easier logging
             for val in tqdm(parameter_grid, desc="Running simulations (serial)"):
-                run_single_simulation(val, upload_to_drive)
+                run_single_simulation(val)
 
     except KeyboardInterrupt:
         safe_print("\n❌ Simulation interrupted by user (Ctrl+C).")
