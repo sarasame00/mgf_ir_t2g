@@ -14,4 +14,4 @@ RESOLUTION = 3           # Parameter resolution (per dimension)
 
 if __name__ == "__main__":
     param_tuples = generate_ss_grid(PRESET, RESOLUTION)
-    run_all_ss_simulations(param_tuples, parallel=True)
+    run_all_ss_simulations(param_tuples, parallel=False)

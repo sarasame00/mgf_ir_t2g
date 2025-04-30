@@ -143,7 +143,7 @@ def upload_csv_to_drive(local_path, parent_id, filename):
 
 
 def update_and_upload_csv(new_row: list, local_csv_path, gd_id_dir, csv_name, header):
-    """Safely update the model-specific CSV with a new row and upload."""
+    """Safely update the model-specific CSV with new rows and upload."""
 
     # Download existing CSV if it exists
     download_csv_from_drive(local_csv_path, gd_id_dir, csv_name)
@@ -153,17 +153,27 @@ def update_and_upload_csv(new_row: list, local_csv_path, gd_id_dir, csv_name, he
     else:
         df = pd.DataFrame(columns=header)
 
-    # Create new_row as DataFrame with correct columns
-    new_df = pd.DataFrame([new_row], columns=header)
+    if not new_row:
+        print("⚠️ No new rows to add, skipping upload.")
+        return
+
+    # 🧠 Detect if it's a single row (list of values) or list of rows
+    if isinstance(new_row[0], (int, float, str)):
+        # It's a single row → wrap it
+        new_row = [new_row]
+
+    # Create DataFrame
+    new_df = pd.DataFrame(new_row, columns=header)
 
     # Concatenate safely
     combined_df = pd.concat([df, new_df], ignore_index=True).drop_duplicates()
 
-    # Save cleaned
+    # Save locally
     combined_df.to_csv(local_csv_path, index=False)
 
-    # Upload back to Drive
+    # Upload to Drive
     upload_csv_to_drive(local_csv_path, gd_id_dir, csv_name)
+
 
 
 
