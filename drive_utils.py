@@ -12,7 +12,7 @@ import csv
 
 # === CONFIG ===
 SERVICE_ACCOUNT_FILE = Path(__file__).parent / "drive_service_account.json"
-FOLDER_ID = '1qroO12tPkKu6c3w5Xy-2Reys5XFcbX5L'
+FOLDER_ID = '1bGjypGXeZoy8tVkU4VYQgoJa_oewOtlO'
 SCOPES = ['https://www.googleapis.com/auth/drive']
 
 

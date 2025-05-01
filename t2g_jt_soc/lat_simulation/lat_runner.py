@@ -49,9 +49,6 @@ def run_single_simulation(val):
     now = f"{datetime.now().strftime('%Y%m%d%H%M%S%f')}{os.getpid()}"
     out_path = os.path.join(LAT_OUTPUT_DIR, now)
 
-    # Log the simulation start 
-    safe_print(f"🚀 Starting → N={val[2]} t={val[3]} U={val[4]} J={val[5]} lbd={val[9]} g={val[8]}")
-
     # Run the solver for this parameter set
     solver = DysonSolver(*val, fl=out_path + ".out")
     solver.solve(diis_active=True, tol=5e-6)

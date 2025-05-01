@@ -20,4 +20,4 @@ LAT_CSV_NAME = "simulated_values_lat.csv"
 LAT_CSV_DIR = BASE_DIR / "t2g_jt_soc" / "lat_data" / LAT_CSV_NAME
 LAT_OUTPUT_DIR = BASE_DIR / "t2g_jt_soc" / "lat_data" / "lat_results"
 
-LAT_GD_ID_DIR = "1-UDQwKXUsjsOpKgKBeGaIO1Acv7T8wm6"
+LAT_GD_ID_DIR = "11iE39rc67cgmxzWcNpTn2TnBWPXYhK6u"
