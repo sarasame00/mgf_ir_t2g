@@ -25,11 +25,12 @@ creds = service_account.Credentials.from_service_account_file(
 drive_service = build('drive', 'v3', credentials=creds)
 
 def get_file_id_by_name(filename, parent_id):
-    """Query Google Drive folder for a file ID by name."""
-    query = f"name = '{filename}' and '{parent_id}' in parents and trashed = false"
+    safe_filename = repr(filename)  # this adds proper quotes and escapes
+    query = f"name = {safe_filename} and '{parent_id}' in parents and trashed = false"
     results = drive_service.files().list(q=query, fields="files(id, name)").execute()
     items = results.get('files', [])
     return items[0]['id'] if items else None
+
 
 def download_txt_file(file_id):
     """Download text file content (CSV or TXT) by file ID."""
