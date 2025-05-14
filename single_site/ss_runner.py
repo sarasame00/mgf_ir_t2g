@@ -8,7 +8,7 @@ from multiprocessing import Lock
 
 from single_site.ss_simulation import eigobj
 from config.ss_settings import SS_OUTPUT_DIR, SS_CSV_DIR, SS_GD_ID_DIR, SS_CSV_HEADER, SS_CSV_NAME
-from drive_utils import upload_file_to_drive, get_completed_params_from_drive, update_and_upload_csv, download_csv_from_drive
+from drive_utils import upload_file_to_drive, get_completed_params_from_drive, update_and_upload_csv
 
 # Locks for thread-safe operations
 print_lock = Lock()
