@@ -1,5 +1,6 @@
 import os
 import csv
+import pandas as pd
 from datetime import datetime
 from joblib import Parallel, delayed
 from tqdm import tqdm
@@ -17,7 +18,7 @@ def safe_print(*args, **kwargs):
     with print_lock:
         print(*args, **kwargs)
 
-def run_single_simulation(val):
+def run_single_simulation(val, upload_to_drive=True):
     """
     Run a single DysonSolver simulation and record its result.
 
@@ -28,7 +29,7 @@ def run_single_simulation(val):
     - Appends a summary row to the tracking CSV.
 
     Parameters:
-    - val (tuple): A single set of parameters (T, wM, N, t, U, J, ..., etc).
+    - val (tuple): A single set of parameters(T, wmax, N, t, U, J, Jphm, w0, g, lbd, k_sz, diis_mem)
 
     Note:
     - Compatible with joblib multiprocessing (thread-safe).
@@ -36,8 +37,10 @@ def run_single_simulation(val):
 
     # Round the param tuple before comparison (3 decimal places)
     rounded_param = tuple(round(x, 3) for x in val)
-
-    already = get_completed_params_from_drive("simulated_values_lat.csv", LAT_GD_ID_DIR)
+    if upload_to_drive:
+        already = get_completed_params_from_drive("simulated_values_lat.csv", LAT_GD_ID_DIR)
+    else:
+        already = []
 
     if rounded_param in already:
         safe_print(f"Skipping completed simulation: {rounded_param}")
@@ -53,15 +56,30 @@ def run_single_simulation(val):
     solver = DysonSolver(*val, fl=out_path + ".out")
     solver.solve(diis_active=True, tol=5e-6)
 
-    solver.save(out_path) # Save hdf5 local and drive
-
-    # Log the simulation finish
-    safe_print(f"✅ Finished → saved {now}")
+    solver.save(out_path, upload_to_drive) # Save hdf5
     
     # Upload csv
     new_row = list(val) + [int(now)]
-    update_and_upload_csv(new_row, LAT_CSV_DIR, LAT_GD_ID_DIR, LAT_CSV_NAME, LAT_CSV_HEADER)
+    if upload_to_drive:
+        update_and_upload_csv(new_row, LAT_CSV_DIR, LAT_GD_ID_DIR, LAT_CSV_NAME, LAT_CSV_HEADER)
+    else:
+        df = pd.read_csv(LAT_CSV_DIR)
+        # Detect if it's a single row (list of values) or list of rows
+        if isinstance(new_row[0], (int, float, str)):
+            # It's a single row → wrap it
+            new_row = [new_row]
 
+        # Create DataFrame
+        new_df = pd.DataFrame(new_row, columns=LAT_CSV_HEADER)
+
+        # Concatenate safely
+        combined_df = pd.concat([df, new_df], ignore_index=True).drop_duplicates()
+
+        # Save locally
+        combined_df.to_csv(LAT_CSV_DIR, index=False)
+    
+    # Log the simulation finish
+    safe_print(f"✅ Finished → saved {now}")
 
 def run_all_simulations(parameter_grid, n_jobs=-1, parallel=True, upload_to_drive=True):
     """
@@ -87,14 +105,15 @@ def run_all_simulations(parameter_grid, n_jobs=-1, parallel=True, upload_to_driv
         if parallel:
             # Run in parallel using joblib
             Parallel(n_jobs=n_jobs)(
-                delayed(run_single_simulation)(val)
+                delayed(run_single_simulation)(val, upload_to_drive)
                 for val in tqdm(parameter_grid, desc="Running simulations (parallel)")
             )
         else:
             # Run sequentially for debugging or easier logging
             for val in tqdm(parameter_grid, desc="Running simulations (serial)"):
-                run_single_simulation(val)
+                run_single_simulation(val, upload_to_drive)
 
     except KeyboardInterrupt:
-        safe_print("\n❌ Simulation interrupted by user (Ctrl+C).")
+        safe_print("\n❌ Simulation interrupted by user.")
 
+    safe_print("\n✅ All simulations completed.")

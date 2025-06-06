@@ -158,7 +158,7 @@ def update_and_upload_csv(new_row: list, local_csv_path, gd_id_dir, csv_name, he
         print("⚠️ No new rows to add, skipping upload.")
         return
 
-    # 🧠 Detect if it's a single row (list of values) or list of rows
+    # Detect if it's a single row (list of values) or list of rows
     if isinstance(new_row[0], (int, float, str)):
         # It's a single row → wrap it
         new_row = [new_row]

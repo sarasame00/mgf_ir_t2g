@@ -224,11 +224,11 @@ class DysonSolver:
                 gkiw = (
                     self.freqf[:, None, None, None] - self.Hlatt[None, :, :, :]  # ε_k
                     - self.sehf     
-                    - self.se2biw[:,None,None,None]                                               # Static HF self-energy
-                    - self.sephm[None, :, :, :]      #AQUIIIII                                   # Momentum-dependent self-energy
-                    - 2 * self.seepiw[:, None, None, None]                                      # Dynamical e-ph self-energy
-                    + self.mu                                                               # Chemical potential
-                    - 0.5 * self.lbd * ohmatrix(0, 1)                                       # Spin-orbit term
+                    - self.se2biw[:,None,None,None]                              # Static HF self-energy
+                    - self.sephm[None, :, :, :]                                  # Momentum-dependent self-energy
+                    - 2 * self.seepiw[:, None, None, None]                       # Dynamical e-ph self-energy
+                    + self.mu                                                    # Chemical potential
+                    - 0.5 * self.lbd * ohmatrix(0, 1)                            # Spin-orbit term
                 )**-1
 
                 # Project G_k(iωₙ) to IR basis using ohfit and store only real part
@@ -440,11 +440,11 @@ class DysonSolver:
                     out_fl.close()
                     return
 
-    def save(self, path):
+    def save(self, path, upload_to_drive=True):
         """
         Export all quantities to HDF5 using the `export_solver_to_hdf5` function.
         """
         if not self.__solved:
             print("Not solved yet, nothing to save")
             return
-        export_solver_to_hdf5(self, path)
+        export_solver_to_hdf5(self, path, upload_to_drive=upload_to_drive)

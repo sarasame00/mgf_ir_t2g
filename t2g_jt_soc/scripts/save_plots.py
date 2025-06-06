@@ -18,7 +18,7 @@ h5_paths = ['2025041713055771033425185',
  '2025041715050670570526514',
  '2025041716030744710426973',
  '2025041716094655060426973']
-# file:///Users/sarasalesmerino/Desktop/ICMAB/mgf_ir_t2g/t2g_jt_soc/lat_data/lat_results/2025041713055771033425185.hdf5
+
 outdir= str(ROOT_DIR) + '/lat_data/lat_figures'
 
 for i in h5_paths:
